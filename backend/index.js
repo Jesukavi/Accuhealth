@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import fileUpload from "express-fileupload";
+import path from "path";
+import { fileURLToPath } from "url";
 dotenv.config();
 
 import sequelize from "./config/db_sequelize.js";
@@ -11,6 +13,10 @@ import FeverRash from "./models/FeverRash.js";
 import ARI from "./models/ARI.js";
 import Polio from "./models/Polio.js";
 import Hemorrhagic from "./models/Hemorrhagic.js";
+
+// Define __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Seed 3 mock Hemorrhagic records (only if table is empty)
 const seedHemorrhagic = async () => {
@@ -634,11 +640,11 @@ import hbvRoutes from "./routes/hbvRoutes.js";
 import hcvRoutes from "./routes/hcvRoutes.js";
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://accuhealth.netlify.app"],
+    origin: ["http://localhost:5173", "https://accuhealth.netlify.app", "http://5.189.170.49",],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
   }),
@@ -671,11 +677,19 @@ app.use("/api/hcv-notifications", hcvRoutes);
 app.use("/api/malaria-notifications", malariaRoutes);
 app.use("/api/health", (req, res) => res.json({ message: "Health is good" }));
 
+// serve frontend build
+const frontendPath = path.join(__dirname, "public");
+
+app.use(express.static(frontendPath));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
+
 // ── Async init: DB sync → table creation → seed → listen ──────────────────
 async function init() {
   try {
     // alter:false = just verify tables exist, no column-diff on every boot
-    // Set alter:true temporarily only when you change a model definition
     await sequelize.sync({ alter: false });
     console.log("✅ Sequelize sync complete");
 
