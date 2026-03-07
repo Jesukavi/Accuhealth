@@ -1,0 +1,75 @@
+import { DataTypes } from "sequelize";
+import sequelize from "../config/db_sequelize.js";
+
+const TB = sequelize.define("TB", {
+  id: {
+    type: DataTypes.STRING(24),
+    primaryKey: true,
+    allowNull: false,
+  },
+  governorate: DataTypes.STRING,
+  wilayat: DataTypes.STRING,
+  institution: DataTypes.STRING,
+  reportingDate: DataTypes.DATE,
+  patientId: DataTypes.STRING,
+  civilId: DataTypes.STRING,
+  expiryDate: DataTypes.DATE,
+  dob: DataTypes.DATE,
+  age: DataTypes.INTEGER,
+  term: DataTypes.STRING,
+  passportNo: DataTypes.STRING,
+  nationality: DataTypes.STRING,
+  firstName: DataTypes.STRING,
+  secondName: DataTypes.STRING,
+  thirdName: DataTypes.STRING,
+  gender: DataTypes.STRING,
+  tribe: DataTypes.STRING,
+  sheikhName: DataTypes.STRING,
+  mobileNo: DataTypes.STRING,
+  nextOfKinMobile: DataTypes.STRING,
+  maritalStatus: DataTypes.STRING,
+  education: DataTypes.STRING,
+  workStatus: DataTypes.STRING,
+  occupations: DataTypes.STRING,
+  placeOfWork: DataTypes.STRING,
+  monthlyIncome: DataTypes.FLOAT,
+  patientGovernorate: DataTypes.STRING,
+  patientWilayat: DataTypes.STRING,
+  village: DataTypes.STRING,
+  latitude: DataTypes.STRING,
+  longitude: DataTypes.STRING,
+  firstSymptom: DataTypes.STRING,
+  onsetSymptom: DataTypes.DATE,
+  diagnosedDate: DataTypes.DATE,
+  tbTreatmentDate: DataTypes.DATE,
+  patientReferred: DataTypes.STRING,
+  previousTB: DataTypes.STRING,
+  familyTB: DataTypes.STRING,
+  contactTB: DataTypes.STRING,
+  travelHistory: DataTypes.STRING,
+  signsSymptoms: DataTypes.JSON, // Array
+  riskFactors: DataTypes.JSON, // Array
+  igraDate: DataTypes.DATE,
+  igraResult: DataTypes.STRING,
+  igraRemarks: DataTypes.TEXT,
+  mantouxDate: DataTypes.DATE,
+  mantouxReading: DataTypes.STRING,
+  mantouxResult: DataTypes.STRING,
+  mantouxRemarks: DataTypes.TEXT,
+  hivDate: DataTypes.DATE,
+  hivResult: DataTypes.STRING,
+  hivRemarks: DataTypes.TEXT,
+  labTests: DataTypes.JSON, // Array
+  radiologyTests: DataTypes.JSON, // Array
+  drugSensitivityTests: DataTypes.JSON, // Array
+  classification: DataTypes.STRING,
+  outcome: DataTypes.STRING,
+  outcomeDate: DataTypes.DATE,
+  confirmedTB: DataTypes.STRING,
+  finalOutcome: DataTypes.STRING,
+  finalOutcomeDate: DataTypes.DATE,
+  attachments: DataTypes.JSON, // Array
+  status: { type: DataTypes.STRING, defaultValue: "Pending" },
+});
+
+export default TB;

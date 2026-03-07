@@ -1,0 +1,48 @@
+import { DataTypes } from "sequelize";
+import sequelize from "../config/db_sequelize.js";
+
+const ARI = sequelize.define("ARI", {
+  id: {
+    type: DataTypes.STRING(24),
+    primaryKey: true,
+    allowNull: false,
+  },
+  governorate: DataTypes.STRING,
+  wilayat: DataTypes.STRING,
+  institution: DataTypes.STRING,
+  reportingDate: DataTypes.DATE,
+  patientId: DataTypes.STRING,
+  civilId: DataTypes.STRING,
+  expiryDate: DataTypes.DATE,
+  age: DataTypes.INTEGER,
+  firstName: DataTypes.STRING,
+  secondName: DataTypes.STRING,
+  dob: DataTypes.DATE,
+  term: DataTypes.STRING,
+  mobileNo: DataTypes.STRING,
+  nextOfKinMobileNo: DataTypes.STRING,
+  education: DataTypes.STRING,
+  passportNo: DataTypes.STRING,
+  placeOfWork: DataTypes.STRING,
+  monthlyIncome: DataTypes.FLOAT,
+  patientGovernorate: DataTypes.STRING,
+  nationality: DataTypes.STRING,
+  longitude: DataTypes.STRING,
+  maritalStatus: DataTypes.STRING,
+  patientWilayat: DataTypes.STRING,
+  gender: DataTypes.STRING,
+  workStatus: DataTypes.STRING,
+  caseType: DataTypes.STRING,
+  vaccinationDetails: DataTypes.STRING,
+  sentinelSite: DataTypes.STRING,
+  suspectDisease: DataTypes.STRING,
+  diseaseStatus: DataTypes.STRING,
+  confirmedDiseases: DataTypes.STRING,
+  sourceOfInfection: DataTypes.STRING,
+  finalOutcome: DataTypes.STRING,
+  finalOutcomeDate: DataTypes.DATE,
+  remarks: DataTypes.TEXT,
+  status: { type: DataTypes.STRING, defaultValue: "Pending" },
+});
+
+export default ARI;
