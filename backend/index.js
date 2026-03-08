@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 dotenv.config();
 
 import sequelize from "./config/db_sequelize.js";
-import MalariaNotification from "./models/MalariaNotification.js";
+import MalariaNotification from "./models/malariaNotification.js";
 import TB from "./models/TB.js";
 import FeverRash from "./models/FeverRash.js";
 import ARI from "./models/ARI.js";
@@ -644,7 +644,7 @@ const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://accuhealth.netlify.app", "http://5.189.170.49",],
+    origin: ["http://localhost:5173","http://5.189.170.49",],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
   }),
