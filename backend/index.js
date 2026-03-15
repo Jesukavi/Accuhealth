@@ -644,7 +644,7 @@ const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173","http://5.189.170.49","http://ens.accuhealths.com"],
+    origin: ["http://localhost:5173","http://5.189.170.49","https://ens.accuhealths.com"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
   }),
