@@ -1,5 +1,5 @@
 import express from "express";
-import MalariaNotification from "../models/MalariaNotification.js";
+import MalariaNotification from "../models/malariaNotification.js";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();

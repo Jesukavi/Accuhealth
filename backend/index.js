@@ -2,15 +2,21 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import fileUpload from "express-fileupload";
+import path from "path";
+import { fileURLToPath } from "url";
 dotenv.config();
 
 import sequelize from "./config/db_sequelize.js";
-import MalariaNotification from "./models/MalariaNotification.js";
+import MalariaNotification from "./models/malariaNotification.js";
 import TB from "./models/TB.js";
 import FeverRash from "./models/FeverRash.js";
 import ARI from "./models/ARI.js";
 import Polio from "./models/Polio.js";
 import Hemorrhagic from "./models/Hemorrhagic.js";
+
+// Define __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Seed 3 mock Hemorrhagic records (only if table is empty)
 const seedHemorrhagic = async () => {
@@ -638,11 +644,11 @@ import User from "./models/User.js";
 import UserPermission from "./models/UserPermission.js";
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://accuhealth.netlify.app"],
+    origin: ["http://localhost:5173","http://5.189.170.49","https://ens.accuhealths.com"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
   }),
@@ -676,6 +682,15 @@ app.use("/api/malaria-notifications", malariaRoutes);
 app.use("/api/malaria-reports", malariaReportRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/health", (req, res) => res.json({ message: "Health is good" }));
+
+// serve frontend build
+const frontendPath = path.join(__dirname, "public");
+
+app.use(express.static(frontendPath));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
 
 // ── Async init: DB sync → table creation → seed → listen ──────────────────
 // Ensure super admin flag is set on the default admin user
