@@ -227,9 +227,13 @@ const HBVView: React.FC = () => {
                                     <div className="bg-slate-100 p-2 font-bold text-slate-700 border-r border-slate-300">Gender</div>
                                     <div className="p-2">{data.gender || '-'}</div>
                                 </div>
-                                <div className="grid grid-cols-[160px_1fr]">
+                                <div className="grid grid-cols-[160px_1fr] border-b border-slate-300">
                                     <div className="bg-slate-100 p-2 font-bold text-slate-700 border-r border-slate-300">Age</div>
                                     <div className="p-2">{data.age} {data.term}</div>
+                                </div>
+                                <div className="grid grid-cols-[160px_1fr]">
+                                    <div className="bg-slate-100 p-2 font-bold text-slate-700 border-r border-slate-300">Mobile Number</div>
+                                    <div className="p-2 font-mono">{data.mobileNo || data.nextOfKinMobile || '-'}</div>
                                 </div>
                             </div>
                         </div>

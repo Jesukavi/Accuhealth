@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import UserPermission from "../models/UserPermission.js";
 
 const router = express.Router();
 
@@ -53,17 +54,33 @@ router.post("/login", async (req, res) => {
     if (!isValidPassword)
       return res.status(401).json({ error: "Invalid credentials" });
 
+    // Fetch allowed pages for this user
+    let allowedPages = [];
+    if (!user.isSuperAdmin) {
+      const permissions = await UserPermission.findAll({
+        where: { userId: user.id },
+        attributes: ["pageKey"],
+      });
+      allowedPages = permissions.map((p) => p.pageKey);
+    }
+
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, isSuperAdmin: user.isSuperAdmin },
       process.env.JWT_SECRET || "your-secret-key",
       {
         expiresIn: "24h",
-      },
+      }
     );
 
     res.json({
       token,
-      user: { id: user.id, email: user.email, name: user.name },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        isSuperAdmin: user.isSuperAdmin,
+        allowedPages,
+      },
     });
   } catch (error) {
     console.error("Login Error:", error);

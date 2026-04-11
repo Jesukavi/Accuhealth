@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileDown, Plus, Minus } from 'lucide-react';
+import { ArrowLeft, FileDown, Plus, Minus, Search, X } from 'lucide-react';
 import { tbScreeningApi } from './api/tbScreening';
 import type { TBListingSearchData ,ReferralListingSearchData } from './types';
 
@@ -44,6 +44,7 @@ const TBListing: React.FC = () => {
   });
 
   const [tbResults, setTbResults] = useState<any[]>([]);
+  const [quickSearch, setQuickSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -249,24 +250,40 @@ const TBListing: React.FC = () => {
 
   const clearTbForm = () => {
     setTbSearchData({
-      governorate: '',
-      wilayat: '',
-      reportingInstitute: '',
-      notificationId: '',
-      reportingDateFrom: '',
-      reportingDateTo: '',
-      classification: '',
-      status: '',
-      finalOutcome: '',
-      finalOutcomeDateFrom: '',
-      finalOutcomeDateTo: '',
-      tbContact: '',
-      confirmedTB: '',
-      mode: '',
-      hospitalType: '',
-      includeGovernorate: false,
-      riskFactors: ''
+      governorate: '', wilayat: '', reportingInstitute: '', notificationId: '',
+      reportingDateFrom: '', reportingDateTo: '', classification: '', status: '',
+      finalOutcome: '', finalOutcomeDateFrom: '', finalOutcomeDateTo: '',
+      tbContact: '', confirmedTB: '', mode: '', hospitalType: 'all',
+      includeGovernorate: false, riskFactors: ''
     });
+  };
+
+  const exportToExcel = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      const exportData = tbResults.map((r, idx) => ({
+        'S.No': idx + 1,
+        'Notification ID': r.notificationId,
+        'Reporting Date': r.reportingDate,
+        'Patient Name': r.patientName,
+        'Patient No': r.patientNo,
+        'Notification Name': r.notificationName,
+        'Reporting From Gov': r.reportingFromGov,
+        'Reporting From Inst': r.reportingFromInst,
+        'Follow Up Gov': r.followUpGov,
+        'Follow Up Inst': r.followUpInst,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Records');
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `TB_Listings_${dateStr}.xlsx`);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Failed to export to Excel');
+    }
   };
 
   const clearReferralForm = () => {
@@ -583,14 +600,8 @@ const TBListing: React.FC = () => {
         <div className="flex justify-end space-x-3 mt-6">
           <button
             type="button"
-            className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-          >
-            Advanced Search
-          </button>
-          <button
-            type="button"
             onClick={handleTbSearch}
-            className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
             Search
           </button>
@@ -603,6 +614,7 @@ const TBListing: React.FC = () => {
           </button>
           <button
             type="button"
+            onClick={exportToExcel}
             className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2"
           >
             <FileDown className="h-4 w-4" />
@@ -612,6 +624,44 @@ const TBListing: React.FC = () => {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        {/* Quick search bar */}
+        <div className="px-6 py-3 border-b border-slate-200 flex flex-wrap items-center gap-3 bg-slate-50">
+          {(() => {
+            const filteredTbResults = tbResults.filter(r =>
+              !quickSearch ||
+              r.patientName?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+              r.notificationId?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+              r.patientNo?.toLowerCase().includes(quickSearch.toLowerCase())
+            );
+            return null;
+          })()}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={quickSearch}
+              onChange={e => setQuickSearch(e.target.value)}
+              placeholder="Quick search by name, ID..."
+              className="w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {quickSearch && (
+              <button
+                onClick={() => setQuickSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          <span className="text-sm text-slate-500">
+            {tbResults.filter(r =>
+              !quickSearch ||
+              r.patientName?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+              r.notificationId?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+              r.patientNo?.toLowerCase().includes(quickSearch.toLowerCase())
+            ).length} of {tbResults.length} records
+          </span>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-100">
@@ -627,14 +677,24 @@ const TBListing: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {tbResults.length === 0 ? (
+              {tbResults.filter(r =>
+                !quickSearch ||
+                r.patientName?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+                r.notificationId?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+                r.patientNo?.toLowerCase().includes(quickSearch.toLowerCase())
+              ).length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-slate-500 italic">
                     No Rows To Show
                   </td>
                 </tr>
               ) : (
-                tbResults.map((result, index) => (
+                tbResults.filter(r =>
+                  !quickSearch ||
+                  r.patientName?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+                  r.notificationId?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+                  r.patientNo?.toLowerCase().includes(quickSearch.toLowerCase())
+                ).map((result, index) => (
                   <tr key={index} className="border-t border-slate-200 hover:bg-slate-50">
                     <td className="px-4 py-3 text-sm text-slate-700">{result.notificationId}</td>
                     <td className="px-4 py-3 text-sm text-slate-700">{result.reportingDate}</td>

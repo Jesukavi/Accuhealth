@@ -156,9 +156,33 @@ const HemorrhagicNotification: React.FC = () => {
     });
   };
 
-  const handleExportToExcel = () => {
-    console.log('Exporting to Excel...');
-    alert('Export to Excel functionality would be implemented here');
+  const handleExportToExcel = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      const exportData = results.map((r, idx) => ({
+        'S.No': idx + 1,
+        'Notification ID': r.notificationId,
+        'Reporting Date': r.reportingDate,
+        'Date of Onset': r.dateOfCourt, // note: property is named dateOfCourt
+        'Patient No.': r.patientNo,
+        'Patient Name': r.patientName,
+        'Age': r.age,
+        'Sex': r.sex,
+        'Governorate': r.reportingDocuments, // maps to governorate visually
+        'Institution': r.reportingInstitutes, // maps to institution visually
+        'Status': r.status,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Records');
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `Hemorrhagic_Notifications_${dateStr}.xlsx`);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Failed to export to Excel');
+    }
   };
 
   const handleDelete = async (id: string) => {

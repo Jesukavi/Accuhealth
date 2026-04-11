@@ -1,39 +1,41 @@
 import express from "express";
+import { Op } from "sequelize";
 import { authenticateToken } from "../middleware/authMiddleware.js";
+import VaccinationReport from "../models/VaccinationReport.js";
 
 const router = express.Router();
 
-router.get("/vaccination-reports", authenticateToken, (req, res) => {
-  const reports = [
-    {
-      id: 1,
-      patientName: "Pradeep",
-      testLevel: "blood smear microscopy",
-      status: "positive",
-      testDate: "2024-01-15",
-      patientId: "P001",
-      institute: "Central Lab",
-    },
-    {
-      id: 2,
-      patientName: "Anwar",
-      testLevel: "Rapid Diagnostic Tests",
-      status: "positive",
-      testDate: "2024-01-16",
-      patientId: "P002",
-      institute: "Health Center",
-    },
-    {
-      id: 3,
-      patientName: "Azar",
-      testLevel: "Renal Function Test",
-      status: "negative",
-      testDate: "2024-01-17",
-      patientId: "P003",
-      institute: "Medical Center",
-    },
-  ];
-  res.json(reports);
+// Auto-create table if it doesn't exist
+VaccinationReport.sync({ alter: false }).catch(err =>
+  console.error("VaccinationReport table sync error:", err)
+);
+
+// GET all vaccination reports from DB (with optional search/filter)
+router.get("/vaccination-reports", authenticateToken, async (req, res) => {
+  try {
+    const { search, status } = req.query;
+    const where = {};
+
+    if (search) {
+      where[Op.or] = [
+        { patientName: { [Op.like]: `%${search}%` } },
+        { testLevel: { [Op.like]: `%${search}%` } },
+        { code: { [Op.like]: `%${search}%` } },
+      ];
+    }
+    if (status && status !== "all") {
+      where.status = status;
+    }
+
+    const reports = await VaccinationReport.findAll({
+      where,
+      order: [["createdAt", "DESC"]],
+    });
+    res.json(reports);
+  } catch (error) {
+    console.error("Error fetching vaccination reports:", error);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 router.get("/roles", authenticateToken, (req, res) => {
@@ -154,20 +156,29 @@ router.post("/entry", authenticateToken, (req, res) => {
   }
 });
 
-// Vaccination Report Routes
-router.post("/vaccination-reports", authenticateToken, (req, res) => {
+// POST - Save new vaccination report to DB
+router.post("/vaccination-reports", authenticateToken, async (req, res) => {
   try {
     const { code, name, testLevel, status } = req.body;
 
-    // In a real application, you would save this to a vaccination_reports table
-    // For now, we'll just return success
+    if (!name || !testLevel || !status) {
+      return res.status(400).json({ error: "Name, testLevel, and status are required." });
+    }
+
+    const report = await VaccinationReport.create({
+      code: code || null,
+      patientName: name,
+      testLevel,
+      status,
+      testDate: new Date().toISOString().split("T")[0],
+    });
 
     res.status(201).json({
-      message: "Vaccination report added successfully",
-      id: Date.now(),
+      message: "Vaccination report saved successfully",
+      report,
     });
   } catch (error) {
-    console.error("Server error:", error);
+    console.error("Error saving vaccination report:", error);
     res.status(500).json({ error: "Server error" });
   }
 });

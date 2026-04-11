@@ -112,6 +112,7 @@ const FeverRashListing: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [quickSearch, setQuickSearch] = useState('');
   const itemsPerPage = 35;
 
   // Derived wilayat options
@@ -182,6 +183,34 @@ const FeverRashListing: React.FC = () => {
 
   const handleClear = () => {
     setSearch(defaultSearch);
+  };
+
+  const exportToExcel = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      const exportData = results.map((r, idx) => ({
+        'S.No': idx + 1,
+        'Notification ID': r.notificationId,
+        'Reporting Date': r.reportingDate,
+        'Date of Onset': r.dateOfOnset,
+        'Patient No.': r.patientNo,
+        'Patient Name': r.patientName,
+        'Age': r.age,
+        'Sex': r.sex,
+        'Reporting Institute': r.reportingInstitute,
+        'Status': r.status,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Records');
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `FeverRash_Notifications_${dateStr}.xlsx`);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Failed to export to Excel');
+    }
   };
 
   const totalPages = Math.max(1, Math.ceil(totalRecords / itemsPerPage));
@@ -506,28 +535,46 @@ const FeverRashListing: React.FC = () => {
           </button>
           <button
             type="button"
+            onClick={exportToExcel}
             className="flex items-center space-x-2 px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
           >
             <FileDown className="h-4 w-4" />
             <span>Export to Excel</span>
-          </button>
-          <button
-            type="button"
-            className="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
-          >
-            Advanced Search
-          </button>
-          <button
-            type="button"
-            className="px-5 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm"
-          >
-            Add Note
           </button>
         </div>
       </div>
 
       {/* ── Results ─────────────────────────────────────────── */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        {/* Quick search bar */}
+        <div className="px-5 py-3 border-b border-slate-200 flex flex-wrap items-center gap-3 bg-slate-50">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={quickSearch}
+              onChange={e => setQuickSearch(e.target.value)}
+              placeholder="Quick search by name, ID..."
+              className="w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {quickSearch && (
+              <button
+                onClick={() => setQuickSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          <span className="text-sm text-slate-500">
+            {results.filter(r =>
+              !quickSearch ||
+              r.patientName?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+              r.notificationId?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+              r.patientNo?.toLowerCase().includes(quickSearch.toLowerCase())
+            ).length} of {results.length} records
+          </span>
+        </div>
 
         {/* Loading / empty state */}
         {loading && (
@@ -540,7 +587,14 @@ const FeverRashListing: React.FC = () => {
           <div className="py-14 text-center text-slate-400 italic text-sm">No records found</div>
         )}
 
-        {!loading && results.length > 0 && (
+        {!loading && results.length > 0 && (() => {
+          const filteredRows = results.filter(r =>
+            !quickSearch ||
+            r.patientName?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+            r.notificationId?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+            r.patientNo?.toLowerCase().includes(quickSearch.toLowerCase())
+          );
+          return (
           <>
             {/* Desktop table — hidden on small screens */}
             <div className="hidden md:block overflow-x-auto">
@@ -555,7 +609,7 @@ const FeverRashListing: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {results.map((row, idx) => (
+                  {filteredRows.map((row, idx) => (
                     <tr key={row.notificationId ?? idx} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 text-sm text-slate-400">{idx + 1}</td>
                       <td className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:underline whitespace-nowrap">{row.notificationId || '—'}</td>
@@ -581,7 +635,7 @@ const FeverRashListing: React.FC = () => {
 
             {/* Mobile cards — shown only on small screens */}
             <div className="md:hidden divide-y divide-slate-100">
-              {results.map((row, idx) => (
+              {filteredRows.map((row, idx) => (
                 <div key={row.notificationId ?? idx} className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -620,7 +674,8 @@ const FeverRashListing: React.FC = () => {
               ))}
             </div>
           </>
-        )}
+          );
+        })()}
 
         {/* Footer */}
 

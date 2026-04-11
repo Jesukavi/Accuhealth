@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, FileDown, FileText, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Search, FileDown, FileText, Pencil, Trash2, X } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
 interface ARIListingData {
@@ -79,6 +79,7 @@ const ARIListing: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ARIListingData[]>([]);
   const [formData, setFormData] = useState<ARIListingFormData>(EMPTY_FORM);
+  const [quickSearch, setQuickSearch] = useState('');
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this notification?')) return;
@@ -159,7 +160,41 @@ const ARIListing: React.FC = () => {
     fetchListings(EMPTY_FORM);
   };
 
+  const exportToExcel = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      const exportData = results.map((r, idx) => ({
+        'S.No': idx + 1,
+        'Notification ID': r.notificationId,
+        'Reporting Date': r.reportingDate,
+        'Patient Name': r.patientName,
+        'Patient NO': r.patientNo,
+        'Age': r.age,
+        'Sex': r.sex,
+        'Reporting Institute': r.reportingInstitute,
+        'Status': r.status,
+      }));
 
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Records');
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `ARI_Notifications_${dateStr}.xlsx`);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Failed to export to Excel');
+    }
+  };
+
+
+
+  const filteredResults = results.filter(r =>
+    !quickSearch ||
+    r.patientName?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+    r.notificationId?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+    r.patientNo?.toLowerCase().includes(quickSearch.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
@@ -547,9 +582,6 @@ const ARIListing: React.FC = () => {
               </div>
 
               <div className="flex justify-end space-x-3 mt-6">
-                <button type="button" className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                  Advanced Search
-                </button>
                 <button type="submit" className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2">
                   <Search className="h-4 w-4" />
                   <span>Search</span>
@@ -557,7 +589,7 @@ const ARIListing: React.FC = () => {
                 <button type="button" onClick={handleClear} className="px-6 py-3 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors">
                   Clear
                 </button>
-                <button type="button" className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2">
+                <button type="button" onClick={exportToExcel} className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2">
                   <FileDown className="h-4 w-4" />
                   <span>Export to Excel</span>
                 </button>
@@ -566,15 +598,35 @@ const ARIListing: React.FC = () => {
           </div>
         )}
 
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200/60 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200/60 overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3 bg-slate-50">
             <h2 className="text-lg font-bold text-slate-900">ARI LISTING</h2>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Quick Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={quickSearch}
+                  onChange={e => setQuickSearch(e.target.value)}
+                  placeholder="Search by name, ID..."
+                  className="pl-9 pr-8 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
+                />
+                {quickSearch && (
+                  <button
+                    onClick={() => setQuickSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
               <button
                 onClick={() => setShowForm(!showForm)}
-                className="px-4 py-2 bg-slate-500 text-white text-sm rounded-lg hover:bg-slate-600 transition-colors"
+                className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1"
               >
-                {showForm ? 'Hide Filters' : 'Search Filters'}
+                <Search className="h-4 w-4" />
+                {showForm ? 'Hide Filters' : 'Advanced Search'}
               </button>
               <button
                 onClick={() => navigate('/ari-notification/new')}
@@ -606,12 +658,12 @@ const ARIListing: React.FC = () => {
                   <tr>
                     <td colSpan={10} className="px-4 py-8 text-center text-slate-500">Loading...</td>
                   </tr>
-                ) : results.length === 0 ? (
+                ) : filteredResults.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="px-4 py-8 text-center text-slate-500">No records found</td>
                   </tr>
                 ) : (
-                  results.map((row, index) => (
+                  filteredResults.map((row, index) => (
                     <tr key={row.notificationId || index} className="hover:bg-slate-50">
                       <td className="px-4 py-3 text-sm text-slate-500">{index + 1}</td>
                       <td className="px-4 py-3 text-sm text-slate-700 font-mono text-xs">{row.notificationId?.slice(-8)}</td>

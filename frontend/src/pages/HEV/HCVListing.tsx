@@ -1,25 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, FileText, ArrowLeft, Loader2 } from 'lucide-react';
+import { Search, FileDown, Plus, X, Loader2 } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
 interface HCVRecord {
     _id?: string;
-    id: number;
+    id?: number;
     patientId: string;
     firstName: string;
     secondName: string;
+    thirdName?: string;
+    tribe?: string;
     civilId: string;
     reportingDate: string;
     outcome: string;
+    institution?: string;
+    governorate?: string;
 }
 
+const EMPTY_FORM = {
+    patientId: '',
+    civilId: '',
+    governorate: '',
+    wilayat: '',
+    nationality: '',
+    outcome: '',
+    reportingDateFrom: '',
+    reportingDateTo: '',
+    status: '',
+    sex: ''
+};
+
 const HCVListing: React.FC = () => {
-    // ...
     const navigate = useNavigate();
     const [records, setRecords] = useState<HCVRecord[]>([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
+    const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+    const [formData, setFormData] = useState(EMPTY_FORM);
+    const [quickSearch, setQuickSearch] = useState('');
     const [stats, setStats] = useState({
         total: 0,
         saved: 0,
@@ -42,13 +60,12 @@ const HCVListing: React.FC = () => {
         initAndFetch();
     }, []);
 
-    const fetchRecords = async (searchTerm = '') => {
+    const fetchRecords = async (queryParams = new URLSearchParams()) => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const url = searchTerm
-                ? `${API_BASE_URL}/hcv-notifications?search=${encodeURIComponent(searchTerm)}`
-                : `${API_BASE_URL}/hcv-notifications`;
+            const qs = queryParams.toString();
+            const url = qs ? `${API_BASE_URL}/hcv-notifications?${qs}` : `${API_BASE_URL}/hcv-notifications`;
 
             const response = await fetch(url, {
                 headers: {
@@ -78,222 +95,262 @@ const HCVListing: React.FC = () => {
         }
     };
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        fetchRecords(search);
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleDelete = async (id: number | string | undefined) => {
-        if (!id) return;
-        if (!window.confirm('Are you sure you want to delete this notification?')) return;
-        
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE_URL}/hcv-notifications/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        const params = new URLSearchParams();
+        Object.entries(formData).forEach(([key, value]) => {
+            if (value) params.append(key, value);
+        });
+        fetchRecords(params);
+    };
 
-            if (response.ok) {
-                setRecords(records.filter(r => r.id !== id));
-                // Update stats locally or refetch
-                fetchRecords(search);
-            } else {
-                alert('Failed to delete notification');
-            }
+    const handleClear = () => {
+        setFormData(EMPTY_FORM);
+        fetchRecords();
+    };
+
+    const exportToExcel = async () => {
+        try {
+            const XLSX = await import('xlsx');
+            const exportData = records.map((r, idx) => ({
+                'S.No': idx + 1,
+                'Patient ID': r.patientId,
+                'Civil ID': r.civilId,
+                'Name': `${r.firstName} ${r.secondName} ${r.thirdName || ''} ${r.tribe || ''}`.trim(),
+                'Reporting Date': r.reportingDate,
+                'Outcome': r.outcome,
+                'Institution': r.institution || '',
+                'Governorate': r.governorate || ''
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Records');
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `HCV_Notifications_${dateStr}.xlsx`);
         } catch (error) {
-            console.error('Error deleting record:', error);
-            alert('Error deleting record');
+            console.error('Error exporting to Excel:', error);
+            alert('Failed to export to Excel');
         }
     };
 
     return (
-        <div className="min-h-screen bg-slate-50/50 p-8">
-            <div className="max-w-7xl mx-auto space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-slate-500 text-sm font-medium">
-                            <ArrowLeft className="w-4 h-4 cursor-pointer hover:text-slate-800" onClick={() => navigate('/dashboard')} />
-                            <span>Notifications</span>
-                        </div>
-                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">HCV Notifications</h1>
-                        <p className="text-slate-500">Manage and track Hepatitis C Virus notifications</p>
-                    </div>
-                    <div className="flex gap-3">
-                         <button 
-                            onClick={() => navigate('/hcv-notification')}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all shadow-sm shadow-blue-200 hover:shadow-blue-300 active:scale-95"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>New</span>
-                        </button>
-                    </div>
+        <div className="p-6 max-w-[1600px] mx-auto space-y-6">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900 border-b-2 border-slate-900 inline-block pb-1">
+                        VIRAL HEPATITIS: HCV
+                    </h1>
                 </div>
+            </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 font-medium">Total</p>
-                                <p className="text-3xl font-bold text-slate-900 mt-1">{stats.total}</p>
+            {/* Advanced Search Panel */}
+            {showAdvancedSearch && (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b pb-2">Advanced Search</h3>
+                    <form onSubmit={handleSearch}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-slate-700">Patient ID</label>
+                                <input
+                                    type="text" name="patientId" value={formData.patientId} onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Enter Patient ID"
+                                />
                             </div>
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <FileText className="w-6 h-6 text-blue-600" />
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-slate-700">Civil ID</label>
+                                <input
+                                    type="text" name="civilId" value={formData.civilId} onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Enter Civil ID"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-slate-700">Governorate</label>
+                                <input
+                                    type="text" name="governorate" value={formData.governorate} onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g. Muscat"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-slate-700">Nationality</label>
+                                <input
+                                    type="text" name="nationality" value={formData.nationality} onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Enter Nationality"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-slate-700">Reporting Date From</label>
+                                <input
+                                    type="date" name="reportingDateFrom" value={formData.reportingDateFrom} onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-slate-700">Reporting Date To</label>
+                                <input
+                                    type="date" name="reportingDateTo" value={formData.reportingDateTo} onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-slate-700">Outcome</label>
+                                <input
+                                    type="text" name="outcome" value={formData.outcome} onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g. Recovered, Died"
+                                />
                             </div>
                         </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 font-medium">Saved</p>
-                                <p className="text-3xl font-bold text-green-600 mt-1">{stats.saved}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                                <FileText className="w-6 h-6 text-green-600" />
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 font-medium">Rejected</p>
-                                <p className="text-3xl font-bold text-red-600 mt-1">{stats.rejected}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                                <FileText className="w-6 h-6 text-red-600" />
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 font-medium">Institutes</p>
-                                <p className="text-3xl font-bold text-orange-600 mt-1">{stats.institutes}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                                <FileText className="w-6 h-6 text-orange-600" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Search */}
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                    <form onSubmit={handleSearch} className="flex gap-4">
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                            <input
-                                type="text"
-                                placeholder="Search by name, ID or civil ID..."
-                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
+                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                            <button
+                                type="button" onClick={handleClear}
+                                className="px-6 py-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors flex items-center space-x-2"
+                            >
+                                <X className="h-4 w-4" />
+                                <span>Clear</span>
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                            >
+                                <Search className="h-4 w-4" />
+                                <span>Search</span>
+                            </button>
                         </div>
-                        <button type="submit" className="px-6 py-2.5 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-colors">
-                            Search
-                        </button>
                     </form>
                 </div>
+            )}
 
-                {/* Table */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-slate-50/50 border-b border-slate-100">
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Patient Info</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">IDs</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Reporting Date</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {loading ? (
+            {/* Actions & Results */}
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200/60 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3 bg-slate-50">
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <button
+                            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                        >
+                            <Search className="h-4 w-4" />
+                            {showAdvancedSearch ? 'Hide Search' : 'Advanced Search'}
+                        </button>
+                        <button
+                            onClick={exportToExcel}
+                            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                        >
+                            <FileDown className="h-4 w-4" />
+                            Export to Excel
+                        </button>
+                    </div>
+
+                    {/* Quick Search Bar */}
+                    <div className="flex items-center gap-2 flex-1 min-w-[220px] max-w-sm">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <input
+                                type="text"
+                                value={quickSearch}
+                                onChange={e => setQuickSearch(e.target.value)}
+                                placeholder="Search by name, ID..."
+                                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+                        {quickSearch && (
+                            <button
+                                onClick={() => setQuickSearch('')}
+                                className="p-2 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-lg transition-colors text-sm"
+                                title="Clear search"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={() => navigate('/hcv-notification')}
+                        className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Create New
+                    </button>
+                </div>
+
+                <div className="overflow-x-auto min-h-[400px]">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center p-12 text-slate-500">
+                            <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                            <p>Loading records...</p>
+                        </div>
+                    ) : (() => {
+                        const filteredRecords = records.filter(r =>
+                            !quickSearch ||
+                            `${r.firstName} ${r.secondName}`.toLowerCase().includes(quickSearch.toLowerCase()) ||
+                            r.patientId?.toLowerCase().includes(quickSearch.toLowerCase()) ||
+                            r.civilId?.toLowerCase().includes(quickSearch.toLowerCase())
+                        );
+                        return filteredRecords.length === 0 ? (
+                            <div className="text-center p-12 text-slate-500">
+                                <p>No records found matching your criteria</p>
+                            </div>
+                        ) : (
+                            <table className="w-full">
+                                <thead className="bg-slate-50">
                                     <tr>
-                                        <td colSpan={5} className="py-12 text-center text-slate-500">
-                                            <div className="flex justify-center items-center gap-2">
-                                                <Loader2 className="w-5 h-5 animate-spin" />
-                                                Loading records...
-                                            </div>
-                                        </td>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">ID</th>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Patient</th>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Civil ID</th>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Reporting Date</th>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Outcome</th>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Actions</th>
                                     </tr>
-                                ) : records.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="py-12 text-center text-slate-500">
-                                            No HCV notifications found
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    records.map((record) => (
-                                        <tr key={record.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                                                        {record.firstName?.[0]}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-medium text-slate-900">
-                                                            {record.firstName} {record.secondName}
-                                                        </div>
-                                                        <div className="text-xs text-slate-500">
-                                                            File ID: {record.patientId}
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200">
+                                    {filteredRecords.map((record) => (
+                                        <tr key={record._id || record.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-6 py-4 text-sm font-medium text-slate-900 border-r border-slate-100">{record.patientId}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-600 border-r border-slate-100">{record.firstName} {record.secondName}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-600 border-r border-slate-100">{record.civilId}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-600 border-r border-slate-100 border-b-2 font-semibold">
+                                                {new Date(record.reportingDate).toLocaleDateString()}
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-slate-700">{record.civilId}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-slate-600">
-                                                    {record.reportingDate ? new Date(record.reportingDate).toLocaleDateString() : '-'}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                    record.outcome === 'Recovered' ? 'bg-green-100 text-green-800' :
-                                                    record.outcome === 'Died' ? 'bg-red-100 text-red-800' :
-                                                    'bg-yellow-100 text-yellow-800'
+                                            <td className="px-6 py-4 text-sm border-r border-slate-100 font-bold border-l-2">
+                                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                                    record.outcome === 'Recovered' ? 'bg-green-100 text-green-700' :
+                                                    record.outcome === 'Died' ? 'bg-red-100 text-red-700' :
+                                                    'bg-amber-100 text-amber-700'
                                                 }`}>
-                                                    {record.outcome || 'Pending'}
+                                                    {record.outcome || 'Unknown'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <button 
-                                                        onClick={() => navigate(`/hcv-view/${record.id || record._id}`)}
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        title="View Details"
-                                                    >
-                                                        <FileText className="w-4 h-4" />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => navigate(`/hcv-notification/${record.id || record._id}`)}
-                                                        className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                                                        title="Edit"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleDelete(record.id)}
-                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Delete"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                                                    </button>
-                                                </div>
+                                            <td className="px-6 py-4 text-sm font-medium">
+                                                <button 
+                                                  onClick={() => navigate(`/hcv-view/${record.id || record._id}`)}
+                                                  className="text-blue-500 hover:text-blue-700 mr-3"
+                                                >
+                                                    View
+                                                </button>
+                                                <button
+                                                  onClick={() => navigate(`/hcv-notification/${record.id || record._id}`)}
+                                                  className="text-amber-500 hover:text-amber-700"
+                                                >
+                                                    Edit
+                                                </button>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    ))}
+                                </tbody>
+                            </table>
+                        );
+                    })()}
                 </div>
             </div>
         </div>

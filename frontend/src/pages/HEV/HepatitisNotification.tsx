@@ -104,6 +104,13 @@ const HepatitisNotification: React.FC<{ type: 'HAV' | 'HBV' | 'HCV' | 'HEV' }> =
     };
 
     const handleNext = () => {
+        // Validate required fields on Step 0 (Patient Info)
+        if (currentStep === 0) {
+            if (!formData.mobileNo || formData.mobileNo.trim() === '') {
+                toast.error('Mobile Number is required.');
+                return;
+            }
+        }
         if (currentStep < steps.length - 1) {
             setCurrentStep(currentStep + 1);
         }
@@ -346,6 +353,30 @@ const HepatitisNotification: React.FC<{ type: 'HAV' | 'HBV' | 'HCV' | 'HEV' }> =
                             </select>
                             <input type="number" name="age" value={formData.age} onChange={handleInputChange} className="flex-1 px-4 py-3 border border-slate-300 rounded-lg" />
                         </div>
+                    </div>
+
+                    {/* Mobile Number - Required */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700">
+                            Mobile Number <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="tel"
+                            name="mobileNo"
+                            value={formData.mobileNo}
+                            onChange={handleInputChange}
+                            placeholder="e.g. 9XXXXXXX"
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                                !formData.mobileNo?.trim()
+                                    ? 'border-red-300 bg-red-50 placeholder-red-300'
+                                    : 'border-slate-300'
+                            }`}
+                        />
+                        {!formData.mobileNo?.trim() && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                                <span>⚠</span> Mobile number is required
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>

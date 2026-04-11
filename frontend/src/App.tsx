@@ -7,7 +7,7 @@ import UserManagement from './pages/UserManagement';
 import Notifications from './pages/Notification/Notifications';
 import MalariaEntry from './pages/Notification/MalariaEntry';
 import MalariaView from './pages/Notification/MalariaView';
-import MalariaNotificationListing from './pages/Notification/MalariaNotificationListing';
+import MalariaListing from './pages/Notification/MalariaListing';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -130,7 +130,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <MalariaNotificationListing />
+                    <MalariaListing />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -216,9 +216,11 @@ function App() {
             <Route
               path="/roles"
               element={
-                <Layout>
-                  <Role />
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Role />
+                  </Layout>
+                </ProtectedRoute>
               }
             />
 

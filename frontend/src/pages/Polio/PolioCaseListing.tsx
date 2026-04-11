@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Search, Bell, Plus, History } from 'lucide-react';
+import { ArrowLeft, Search, Bell, Plus, History, X } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
 interface PolioListingData {
@@ -15,6 +15,36 @@ interface PolioListingData {
   pidDiagnosis: string;
   status: string;
 }
+
+const exportToExcel = async (results: PolioListingData[]) => {
+  try {
+    const XLSX = await import('xlsx');
+    const exportData = results.map((r, idx) => ({
+      'S.No': idx + 1,
+      'Notification ID': r.notificationId,
+      'Polio ID': r.polioId,
+      'Patient ID': r.patientId,
+      'Patient Name': r.patientName,
+      'Age': r.age,
+      'GSM': r.gsm,
+      'Reporting Institute': r.reportingInstitute,
+      'Reporting Date': r.reportingDate,
+      'Confirmed Date': r.confirmedDate,
+      'PID Diagnosis': r.pidDiagnosis,
+      'Status': r.status
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Records');
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `Polio_Notifications_${dateStr}.xlsx`);
+  } catch (error) {
+    console.error('Error exporting to Excel:', error);
+    alert('Failed to export to Excel');
+  }
+};
 
 interface CaseListingFormData {
   governorate: string;
@@ -126,6 +156,12 @@ const PolioCaseListing: React.FC = () => {
     fetchListings(EMPTY_FORM);
   };
 
+  const filteredResults = results.filter(r =>
+    !searchQuery ||
+    r.patientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.notificationId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.patientId?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
@@ -150,12 +186,20 @@ const PolioCaseListing: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search Notification ID"
-                className="pl-4 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Search Notification ID, name..."
+                className="pl-4 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
               />
               <button className="absolute right-2 top-1/2 -translate-y-1/2">
                 <Search className="h-5 w-5 text-slate-400" />
               </button>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
               <Bell className="h-5 w-5 text-slate-600" />
@@ -455,13 +499,6 @@ const PolioCaseListing: React.FC = () => {
 
             <div className="flex justify-center items-center space-x-3 mt-8">
               <button
-                type="button"
-                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
-              >
-                <Search className="h-4 w-4" />
-                <span>Advanced Search</span>
-              </button>
-              <button
                 type="submit"
                 className="px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors flex items-center space-x-2"
               >
@@ -474,6 +511,13 @@ const PolioCaseListing: React.FC = () => {
                 className="px-6 py-3 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors"
               >
                 Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => exportToExcel(results)}
+                className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                Export to Excel
               </button>
             </div>
           </form>
@@ -506,12 +550,12 @@ const PolioCaseListing: React.FC = () => {
                   <tr>
                     <td colSpan={10} className="px-4 py-12 text-center text-slate-500 italic border border-slate-200">Loading...</td>
                   </tr>
-                ) : results.length === 0 ? (
+                ) : filteredResults.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="px-4 py-12 text-center text-slate-500 italic border border-slate-200">No Rows To Show</td>
                   </tr>
                 ) : (
-                  results.map((row, index) => (
+                  filteredResults.map((row, index) => (
                     <tr key={row.notificationId || index} className="hover:bg-slate-50">
                       <td className="px-4 py-3 text-sm text-slate-700 border border-slate-200 font-mono text-xs">{row.notificationId?.slice(-8)}</td>
                       <td className="px-4 py-3 text-sm text-slate-700 border border-slate-200">{row.polioId}</td>

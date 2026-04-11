@@ -30,16 +30,6 @@ import {
   CircleDot,
 } from 'lucide-react';
 
-interface User {
-  name: string;
-  email: string;
-  role?: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  logout: () => void;
-}
 
 interface NavigationItem {
   name: string;
@@ -131,7 +121,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [submenuOpen, setSubmenuOpen] = useState<{ [key: string]: boolean }>({});
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user, logout } = useAuth() as AuthContextType;
+  const { user, logout, hasPageAccess } = useAuth();
   const location = useLocation();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -293,26 +283,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       icon: FileText,
       hasSubmenu: true,
       children: [
-        {
-          name: 'Vaccination Report',
-          href: '/vaccination-report',
-          hasSubmenu: true,
-          children: [
-            { name: 'Daily Report', href: '/vaccination-daily-report' },
-            { name: 'Weekly Report', href: '/vaccination-weekly-report' },
-            { name: 'Monthly Report', href: '/vaccination-monthly-report' },
-          ]
-        },
-        {
-          name: 'Malaria Report',
-          href: '/malaria-report',
-          hasSubmenu: true,
-          children: [
-            { name: 'Case Summary', href: '/malaria-case-summary' },
-            { name: 'Epidemiological Report', href: '/malaria-epidemiological-report' },
-            { name: 'Weekly Report', href: '/malaria-weekly-report' },
-          ]
-        },
+        { name: 'Vaccination Report', href: '/vaccination-report' },
+        { name: 'Malaria Report', href: '/malaria-report' },
       ],
     },
 
@@ -324,8 +296,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       children: [
         { name: 'Vaccination Reporting Form', href: '/vaccin-report' },
         { name: 'Vaccination Listing Search', href: '/vaccination-listing' },
-        { name: 'Vaccination Schedule', href: '/vaccination-schedule' },
-        { name: 'Coverage Report', href: '/vaccination-coverage' },
       ],
     },
 
@@ -334,18 +304,36 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     // { name: 'Help / Docs', href: '/help', icon: HelpCircle },
   ];
 
-  const enhancedNavigation: NavigationItem[] = navigation.map(item => {
-    if (item.hasSubmenu && item.children) {
-      return {
-        ...item,
-        children: item.children.map(child => ({
-          ...child,
-          hasSubmenu: (child as any).children !== undefined
-        }))
-      };
-    }
-    return item;
-  });
+  // Filter navigation items by user permissions (super admin sees all)
+  const filterNavItems = (items: NavigationItem[]): NavigationItem[] => {
+    return items
+      .map((item) => {
+        if (item.children) {
+          const filteredChildren = filterNavItems(item.children);
+          if (filteredChildren.length === 0) return null;
+          return { ...item, children: filteredChildren };
+        }
+        // leaf item — check access
+        if (item.href && item.href !== '#' && !hasPageAccess(item.href)) return null;
+        return item;
+      })
+      .filter(Boolean) as NavigationItem[];
+  };
+
+  const enhancedNavigation: NavigationItem[] = filterNavItems(
+    navigation.map(item => {
+      if (item.hasSubmenu && item.children) {
+        return {
+          ...item,
+          children: item.children.map(child => ({
+            ...child,
+            hasSubmenu: (child as any).children !== undefined
+          }))
+        };
+      }
+      return item;
+    })
+  );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

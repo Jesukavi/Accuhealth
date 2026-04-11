@@ -632,6 +632,10 @@ import havRoutes from "./routes/havRoutes.js";
 import malariaRoutes from "./routes/malariaRoutes.js";
 import hbvRoutes from "./routes/hbvRoutes.js";
 import hcvRoutes from "./routes/hcvRoutes.js";
+import malariaReportRoutes from "./routes/malariaReportRoutes.js";
+import roleRoutes from "./routes/roleRoutes.js";
+import User from "./models/User.js";
+import UserPermission from "./models/UserPermission.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -669,31 +673,73 @@ app.use("/api/hav-notifications", havRoutes);
 app.use("/api/hbv-notifications", hbvRoutes);
 app.use("/api/hcv-notifications", hcvRoutes);
 app.use("/api/malaria-notifications", malariaRoutes);
+app.use("/api/malaria-reports", malariaReportRoutes);
+app.use("/api/roles", roleRoutes);
 app.use("/api/health", (req, res) => res.json({ message: "Health is good" }));
 
 // ── Async init: DB sync → table creation → seed → listen ──────────────────
+// Ensure super admin flag is set on the default admin user
+const seedSuperAdmin = async () => {
+  try {
+    const admin = await User.findOne({ where: { email: "admin@gmail.com" } });
+    if (admin && !admin.isSuperAdmin) {
+      await User.update({ isSuperAdmin: true }, { where: { email: "admin@gmail.com" } });
+      console.log("✅ Super admin flag set for admin@gmail.com");
+    }
+  } catch (err) {
+    console.warn("⚠️ Could not seed super admin:", err.message);
+  }
+};
+
 async function init() {
   try {
-    // alter:false = just verify tables exist, no column-diff on every boot
-    // Set alter:true temporarily only when you change a model definition
+    // ── 1. Sync Sequelize models ──────────────────────────────────────────────
+    // alter:false = create tables that don't exist; skip expensive column diffing.
+    // Use alter:true ONLY when you intentionally change a model schema.
     await sequelize.sync({ alter: false });
     console.log("✅ Sequelize sync complete");
 
-    // 2. Create raw-SQL table for malaria (if not existing)
+    // ── 2. Create raw-SQL table for malaria ────────────────────────────────────
     await MalariaNotification.createTable();
 
-    // 3. Seed mock data (no-op if tables already have rows)
+    // ── 3. Fast one-time column migrations (safe: checks before altering) ─────
+    const db = sequelize.getQueryInterface();
+    const userCols = await db.describeTable("Users").catch(() => ({}));
+    if (!userCols.roleId) {
+      await sequelize.query("ALTER TABLE `Users` ADD COLUMN `roleId` INT NULL").catch(() => {});
+      await sequelize.query("ALTER TABLE `Users` ADD COLUMN `roleName` VARCHAR(255) NULL").catch(() => {});
+      console.log("✅ Added roleId/roleName columns to Users");
+    }
+
+    // Ensure roles table exists (fast raw SQL, no Sequelize overhead)
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS \`roles\` (
+        \`id\` INT NOT NULL AUTO_INCREMENT,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`description\` VARCHAR(255),
+        \`allowedPages\` TEXT,
+        \`isActive\` TINYINT(1) DEFAULT 1,
+        \`createdAt\` DATETIME NOT NULL,
+        \`updatedAt\` DATETIME NOT NULL,
+        PRIMARY KEY (\`id\`)
+      )
+    `).catch(() => {});
+
+    // ── 4. Start listening immediately ────────────────────────────────────────
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+
+    // ── 5. Seed mock data sequentially (no-op when tables already have rows) ──
     await MalariaNotification.seed();
     await seedTB();
     await seedFeverRash();
     await seedARI();
     await seedPolio();
     await seedHemorrhagic();
+    await seedSuperAdmin();
+    console.log("✅ Seed complete");
 
-    // 4. Start listening AFTER everything is ready
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
   } catch (err) {
     console.error("❌ Server startup failed:", err);
     process.exit(1);

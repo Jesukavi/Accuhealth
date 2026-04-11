@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Plus,
   Search,
-  Filter,
   Download,
   Eye,
   Edit,
@@ -12,11 +11,12 @@ import {
   Activity,
   CheckCircle,
   XCircle,
-  Calendar,
-  User,
   TestTube
 } from 'lucide-react';
 import VaccinationReportModal from '../../components/VaccinationReportModal';
+import { API_BASE_URL } from '../../config';
+
+const API_URL = API_BASE_URL;
 
 interface VaccinationReport {
   id: number;
@@ -27,10 +27,6 @@ interface VaccinationReport {
   patientId?: string;
   institute?: string;
 }
-
-import { API_BASE_URL } from '../../config';
-
-const API_URL = API_BASE_URL;
 
 const VaccinationReport: React.FC = () => {
   const [reports, setReports] = useState<VaccinationReport[]>([]);

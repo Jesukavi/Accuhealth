@@ -17,13 +17,10 @@ const Login: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-       setEmail('admin@gmail.com');
-    setPassword('admin@1234');
 
     const success = await login(email, password);
     
     if (success) {
-      console.log('Token:', localStorage.getItem('token'));
       navigate('/dashboard');
     } else {
       setError('Invalid email or password');
@@ -35,19 +32,15 @@ const Login: React.FC = () => {
   // New function to handle demo login
   const handleDemoLogin = async (e: React.MouseEvent) => {
     e.preventDefault();
-    setEmail('admin@gmail.com');
-    setPassword('admin@1234');
-    
-    // Optional: Auto-submit the form after setting credentials
-    // setLoading(true);
-    // setError('');
-    // const success = await login('admin@gmail.com', 'admin@1234');
-    // if (success) {
-    //   navigate('/dashboard');
-    // } else {
-    //   setError('Failed to login with demo credentials');
-    // }
-    // setLoading(false);
+    setLoading(true);
+    setError('');
+    const success = await login('admin@gmail.com', 'admin@1234');
+    if (success) {
+      navigate('/dashboard');
+    } else {
+      setError('Demo login failed. Please check the server.');
+    }
+    setLoading(false);
   };
 
   return (

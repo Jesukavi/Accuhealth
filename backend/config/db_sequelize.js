@@ -11,12 +11,12 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST || "localhost",
     dialect: "mysql",
     port: process.env.DB_PORT || 3306,
-    logging: false, // Set to console.log to see SQL queries
+    logging: false,
     pool: {
-      max: 10,
+      max: 3,        // hosted plan max is 5; keep 3 in pool, 2 free for admin ops
       min: 0,
-      acquire: 10000,
-      idle: 10000,
+      acquire: 30000,
+      idle: 5000,    // release idle connections quickly
     },
   },
 );

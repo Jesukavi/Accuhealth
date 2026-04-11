@@ -46,7 +46,11 @@ router.post("/", authenticateToken, async (req, res) => {
 // GET - Get all HCV notifications (with optional search)
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    const { page = 1, limit = 35, search } = req.query;
+    const { 
+      page = 1, limit = 35, search, 
+      patientId, civilId, governorate, wilayat, 
+      nationality, outcome, reportingDateFrom, reportingDateTo, status, sex
+    } = req.query;
 
     let where = {};
     if (search) {
@@ -55,6 +59,23 @@ router.get("/", authenticateToken, async (req, res) => {
         { patientId: { [Op.like]: `%${search}%` } },
         { civilId: { [Op.like]: `%${search}%` } },
       ];
+    }
+    
+    if (patientId) where.patientId = { [Op.like]: `%${patientId}%` };
+    if (civilId) where.civilId = { [Op.like]: `%${civilId}%` };
+    if (governorate) where.governorate = governorate;
+    if (wilayat) where.wilayat = wilayat;
+    if (nationality) where.nationality = nationality;
+    if (outcome) where.outcome = outcome;
+    if (status) where.status = status;
+    if (sex) where.sex = sex;
+    
+    if (reportingDateFrom && reportingDateTo) {
+      where.reportingDate = { [Op.between]: [reportingDateFrom, reportingDateTo] };
+    } else if (reportingDateFrom) {
+      where.reportingDate = { [Op.gte]: reportingDateFrom };
+    } else if (reportingDateTo) {
+      where.reportingDate = { [Op.lte]: reportingDateTo };
     }
 
     const { count, rows: notifications } =
