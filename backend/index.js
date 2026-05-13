@@ -720,6 +720,10 @@ async function init() {
     // ── 3. Fast one-time column migrations (safe: checks before altering) ─────
     const db = sequelize.getQueryInterface();
     const userCols = await db.describeTable("Users").catch(() => ({}));
+    if (!userCols.isSuperAdmin) {
+      await sequelize.query("ALTER TABLE `Users` ADD COLUMN `isSuperAdmin` TINYINT(1) NOT NULL DEFAULT 0").catch(() => {});
+      console.log("✅ Added isSuperAdmin column to Users");
+    }
     if (!userCols.roleId) {
       await sequelize.query("ALTER TABLE `Users` ADD COLUMN `roleId` INT NULL").catch(() => {});
       await sequelize.query("ALTER TABLE `Users` ADD COLUMN `roleName` VARCHAR(255) NULL").catch(() => {});

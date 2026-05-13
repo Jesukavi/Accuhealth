@@ -299,9 +299,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       ],
     },
 
-    // Temporarily disabled
-    // { name: 'Settings', href: '/settings', icon: Settings },
-    // { name: 'Help / Docs', href: '/help', icon: HelpCircle },
+    // Support & Help
+    { name: 'FAQ', href: '/faq', icon: HelpCircle },
+    { name: 'Contact', href: '/contact', icon: HeartPulse },
   ];
 
   // Filter navigation items by user permissions (super admin sees all)

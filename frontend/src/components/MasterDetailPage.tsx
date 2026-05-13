@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, Check, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, AlertCircle, ArrowLeft } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 interface MasterRecord {
@@ -108,7 +108,16 @@ const MasterDetailPage: React.FC<Props> = ({ categoryId, title, namePlaceholder 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-slate-50">
-            <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => window.history.back()}
+                className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors"
+                title="Back"
+              >
+                <ArrowLeft className="h-5 w-5 text-slate-600" />
+              </button>
+              <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
+            </div>
             <button
               onClick={openAdd}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"

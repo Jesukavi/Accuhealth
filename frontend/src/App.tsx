@@ -60,6 +60,8 @@ import SiteOfInjection from './pages/Masters/SiteOfInjection';
 import Treatment from './pages/Masters/Treatment';
 import VaccineManufacturer from './pages/Masters/VaccineManufacturer';
 import VaccineName from './pages/Masters/VaccineName';
+import Contact from './pages/Contact';
+import FAQ from './pages/FAQ';
 
 import { Toaster } from 'react-hot-toast';
 
@@ -831,6 +833,28 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <VaccineName />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Support Routes */}
+            <Route
+              path="/contact"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Contact />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/faq"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <FAQ />
                   </Layout>
                 </ProtectedRoute>
               }

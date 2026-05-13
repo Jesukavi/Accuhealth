@@ -78,6 +78,13 @@ router.get("/", authenticateToken, async (req, res) => {
       offset: (parseInt(page) - 1) * parseInt(limit),
     });
 
+    // Fetch distinct filter values for the entire dataset
+    const [govs, insts, outs] = await Promise.all([
+      TB.findAll({ attributes: ['governorate'], group: ['governorate'], raw: true }),
+      TB.findAll({ attributes: ['institution'], group: ['institution'], raw: true }),
+      TB.findAll({ attributes: ['finalOutcome'], group: ['finalOutcome'], raw: true }),
+    ]);
+
     // Shape rows for the listing table
     const screenings = rows.map((r) => ({
       id: r.id,
@@ -110,13 +117,9 @@ router.get("/", authenticateToken, async (req, res) => {
       },
       // For getFilterOptions compatibility
       filters: {
-        governorates: [
-          ...new Set(rows.map((r) => r.governorate).filter(Boolean)),
-        ],
-        institutions: [
-          ...new Set(rows.map((r) => r.institution).filter(Boolean)),
-        ],
-        outcomes: [...new Set(rows.map((r) => r.finalOutcome).filter(Boolean))],
+        governorates: govs.map(g => g.governorate).filter(Boolean),
+        institutions: insts.map(i => i.institution).filter(Boolean),
+        outcomes: outs.map(o => o.finalOutcome).filter(Boolean),
       },
     });
   } catch (error) {

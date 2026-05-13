@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
 import RoleModal from '../../components/RoleModal'; // Make sure this import path is correct
 
 interface Role {
@@ -89,7 +89,16 @@ const Roles: React.FC = () => {
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h1 className="text-xl font-semibold text-gray-800">Roles</h1>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => window.history.back()}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Back"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-semibold text-gray-800">Roles</h1>
+            </div>
             <button
               onClick={handleAddRole}
               className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-colors duration-200"

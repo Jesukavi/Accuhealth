@@ -40,6 +40,7 @@ const API_URL = API_BASE_URL;
 
 const Masters: React.FC = () => {
   const [masters, setMasters] = useState<Master[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const navigate = useNavigate();
@@ -51,6 +52,7 @@ const Masters: React.FC = () => {
   }, []);
 
   const fetchMasters = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/masters`, {
@@ -378,6 +380,8 @@ const Masters: React.FC = () => {
         description: 'Manage vaccine names',
         count: 0
       }]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -536,8 +540,22 @@ const Masters: React.FC = () => {
 
         {/* Masters Grid */}
         <div className="max-w-7xl mx-auto">
-          {/* Helper to render a card */}
-          {(() => {
+          {/* Loading skeleton */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-lg border border-blue-100 p-8 flex flex-col items-center space-y-4 animate-pulse"
+                >
+                  <div className="w-10 h-10 bg-blue-100 rounded-full" />
+                  <div className="h-3 w-20 bg-gray-200 rounded-full" />
+                </div>
+              ))}
+            </div>
+          ) : (
+          /* Helper to render a card */
+          (() => {
             const roleCard = masters.find(m => m.id === 'role' || m.name === 'Role');
             const otherCards = masters.filter(m => m.id !== 'role' && m.name !== 'Role');
 
@@ -587,7 +605,8 @@ const Masters: React.FC = () => {
                 {otherCards.map(renderCard)}
               </div>
             );
-          })()}
+          })()
+          )}
         </div>
       </div>
 
